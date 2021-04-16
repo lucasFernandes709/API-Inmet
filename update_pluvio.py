@@ -1,13 +1,42 @@
 import pandas as pd
 import numpy as np
 import requests
+from datetime import datetime as dt
+
+
+def print_valid_dates(formats):
+    print(formats)
+
+
+def get_date(str_date: str):
+    _valid_formats_base = ['%d-%m-%Y', '%Y-%m-%d']
+    _valid_formats_variations = [(d,
+                                  d.replace('-', '/'),
+                                  d.replace('Y', 'y'),
+                                  d.replace('-', '/').replace('Y', 'y'))
+                                 for d in _valid_formats_base]
+    _valid_formats_list = [i for t in _valid_formats_variations for i in t]
+
+    for format in _valid_formats_list:
+        try:
+            return dt.strptime(str_date, format).date()
+        except:
+            pass
+
+    print(f'Formato da data {str_date} inválido. Processo abortado!')
+    print_valid_dates(_valid_formats_base)
+    return False
+
 
 # Base URL to access info
-url_base = 'https://apitempo.inmet.gov.br/estacao/{}/{}/{}'
+URL_TEMPLATE = 'https://apitempo.inmet.gov.br/estacao/{}/{}/{}'
 
-# Dados
-start_date = np.datetime64('2020-01-01')
-end_date = np.datetime64('2021-04-13')
+# Parameter collection
+# start_date = np.datetime64('2020-01-01')
+# end_date = np.datetime64('2021-04-13')
+start_date = get_date('2020-01-01')
+end_date = get_date('2021-04-13')
+
 stations = [('Marabá', 'A240'), ('Xinguara', 'A247')]
 final_df = pd.DataFrame()
 
@@ -34,7 +63,7 @@ for station_name, station_cod in stations:
 
     # Get data from Inmet API for all requisitions
     for r in req:
-        dados = requests.get(url_base.format(*r)).json()
+        dados = requests.get(URL_TEMPLATE.format(*r)).json()
 
         # Convert to DataFrame format
         df = pd.DataFrame.from_records(dados)
