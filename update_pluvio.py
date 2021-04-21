@@ -87,8 +87,6 @@ for station_cod in stations:
         # Concat to general DataFrame
         final_df = final_df.append(df, ignore_index=True)  
 
-# TODO: Add functionality to choose aggregation by day/hour
-
 # Save final DataFrame to .CSV file
 final_df.to_csv('final_df.csv', encoding='utf-8-sig', decimal=',', index=False)
 
