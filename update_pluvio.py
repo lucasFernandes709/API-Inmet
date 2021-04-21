@@ -50,7 +50,7 @@ def split_date_range(start_date, end_date, date_intervals):
 
 # Constants
 URL_TEMPLATE = 'https://apitempo.inmet.gov.br/estacao/{}/{}/{}'     # Base URL to access info
-DATE_LIMIT = 180                                                    # Date range limit to 180 days
+DATE_LIMIT   = 180                                                  # Date range limit to 180 days
 
 # Parameter collection
 # start_date = np.datetime64('2020-01-01')
@@ -64,6 +64,7 @@ final_df = pd.DataFrame()
 
 # Loop through stations list
 for station_cod in stations:
+    # TODO: Rewrite date range control outside stations loop
 
     # Check if dates interval is greater than 6 months (180 days)
     date_diff = (end_date - start_date).days
@@ -73,11 +74,13 @@ for station_cod in stations:
         req = split_date_range(start_date, end_date, date_intervals)
     else:
         # Standard requisitions list (will be passed to the API)
-        req = [(str(start_date), str(end_date), station_cod)]                
+        req = [(str(start_date), str(end_date), station_cod)]
 
     # Get data from Inmet API for all requisitions
     for r in req:
         dados = requests.get(URL_TEMPLATE.format(*r)).json()
+
+        # TODO: Add functionality to choose aggregation by day/hour
 
         # Convert to DataFrame format
         df = pd.DataFrame.from_records(dados)
