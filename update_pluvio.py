@@ -53,7 +53,7 @@ URL_TEMPLATE = 'https://apitempo.inmet.gov.br/estacao/{}/{}/{}'     # Base URL t
 DATE_LIMIT   = 180                                                  # Date range limit to 180 days
 
 # Parameter collection
-start_date = get_date('2020-01-01')
+start_date = get_date('2021-01-01')
 end_date = get_date('2021-04-13')
 stations = load_stations('./stations.txt')
 
@@ -72,6 +72,7 @@ else:
 # Generate date requisition list
 req = split_date_range(start_date, end_date, date_intervals)
 
+print(">> Process started <<")
 # Loop through stations list
 for station_cod in stations:
     
@@ -80,22 +81,15 @@ for station_cod in stations:
         r_adj = r + (station_cod,)
         dados = requests.get(URL_TEMPLATE.format(*r_adj)).json()
 
-        # TODO: Add functionality to choose aggregation by day/hour
-
         # Convert to DataFrame format
         df = pd.DataFrame.from_records(dados)
-        df = df.rename(columns={'CHUVA': 'Pluviometria', 'DT_MEDICAO': 'Data'})
-
-        # Indentify data types and aggregate by day
-        df_rain = pd.to_numeric(df['Pluviometria'])
-        df_station = pd.concat([df['Data'], df_rain], axis=1)
-
-        df_agg = df_station.groupby(by='Data')['Pluviometria'].sum().round(2)
-        df_agg.index = pd.to_datetime(df_agg.index, format='%Y-%m-%d').strftime('%d-%m-%Y')
-        df_agg = df_agg.reset_index()
-
+        
         # Concat to general DataFrame
-        final_df = final_df.append(df_agg, ignore_index=True)
+        final_df = final_df.append(df, ignore_index=True)  
 
-    # Save final DataFrame to .CSV file
-    final_df.to_csv('final_df.csv', encoding='utf-8-sig', decimal=',', index=False)
+# TODO: Add functionality to choose aggregation by day/hour
+
+# Save final DataFrame to .CSV file
+final_df.to_csv('final_df.csv', encoding='utf-8-sig', decimal=',', index=False)
+
+print(">> Process finished! <<")
