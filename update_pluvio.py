@@ -8,7 +8,7 @@ def print_valid_dates(formats):
     print(formats)
 
 
-def get_date(str_date: str):
+def get_date(str_date):
     _valid_formats_base = ['%d-%m-%Y', '%Y-%m-%d']
     _valid_formats_variations = [(d,
                                   d.replace('-', '/'),
@@ -28,7 +28,7 @@ def get_date(str_date: str):
     return False
 
 
-def load_stations(file_path: str):
+def load_stations(file_path):
     with open(file_path, 'r') as f:
         station_list = f.readlines()
 
@@ -40,10 +40,10 @@ def split_date_range(start_date, end_date, date_intervals):
     start_date_int = start_date
     for i in range(1, date_intervals + 1):
         end_date_interval = start_date + timedelta(days=180) * i
-        req.append((str(start_date_int), str(end_date_interval), 'A240'))
+        req.append((str(start_date_int), str(end_date_interval)))
         start_date_int = end_date_interval + timedelta(days=1)
 
-    req.append((str(start_date_int), str(end_date), 'A240'))
+    req.append((str(start_date_int), str(end_date)))
 
     return req
 
@@ -53,8 +53,6 @@ URL_TEMPLATE = 'https://apitempo.inmet.gov.br/estacao/{}/{}/{}'     # Base URL t
 DATE_LIMIT   = 180                                                  # Date range limit to 180 days
 
 # Parameter collection
-# start_date = np.datetime64('2020-01-01')
-# end_date = np.datetime64('2021-04-13')
 start_date = get_date('2020-01-01')
 end_date = get_date('2021-04-13')
 stations = load_stations('./stations.txt')
@@ -62,23 +60,25 @@ stations = load_stations('./stations.txt')
 # Empty DataFrame initialization
 final_df = pd.DataFrame()
 
+# Check if dates interval is greater than 6 months (180 days)
+date_diff = (end_date - start_date).days
+if date_diff > DATE_LIMIT:
+    # If true, the date range must be splitted in intervals of 180 days max
+    date_intervals = np.floor(date_diff / DATE_LIMIT).astype(int)
+else:
+    # Default value (will not split the date range)
+    date_intervals = 0
+
+# Generate date requisition list
+req = split_date_range(start_date, end_date, date_intervals)
+
 # Loop through stations list
 for station_cod in stations:
-    # TODO: Rewrite date range control outside stations loop
-
-    # Check if dates interval is greater than 6 months (180 days)
-    date_diff = (end_date - start_date).days
-    if date_diff > DATE_LIMIT:
-        # If true, the date range must be splitted in intervals of 180 days max
-        date_intervals = np.floor(date_diff / DATE_LIMIT).astype(int)
-        req = split_date_range(start_date, end_date, date_intervals)
-    else:
-        # Standard requisitions list (will be passed to the API)
-        req = [(str(start_date), str(end_date), station_cod)]
-
-    # Get data from Inmet API for all requisitions
+    
+    # Get data from Inmet API for each requisition (adjusted)
     for r in req:
-        dados = requests.get(URL_TEMPLATE.format(*r)).json()
+        r_adj = r + (station_cod,)
+        dados = requests.get(URL_TEMPLATE.format(*r_adj)).json()
 
         # TODO: Add functionality to choose aggregation by day/hour
 
