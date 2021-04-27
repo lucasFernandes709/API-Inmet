@@ -1,7 +1,19 @@
+import sys
 import pandas as pd
 import numpy as np
 import requests
 from datetime import datetime, timedelta
+
+def get_flag_status():
+    flag = False
+    
+    if len(sys.argv) > 1:
+        if sys.argv[1].lower() in ['sim', 's', 'y']:
+            flag = True
+        
+        print(f'> Filtrar apenas informação de pluviometria: {flag}')
+    
+    return flag
 
 
 def print_valid_dates(formats):
@@ -51,10 +63,11 @@ def split_date_range(start_date, end_date, date_intervals):
 # Constants
 URL_TEMPLATE = 'https://apitempo.inmet.gov.br/estacao/{}/{}/{}'     # Base URL to access info
 DATE_LIMIT   = 180                                                  # Date range limit to 180 days
+FLAG_RAIN    = get_flag_status()                                    # Flag to retrieve only rain info
 
 # Parameter collection
-start_date = get_date('2021-01-01')
-end_date = get_date('2021-04-13')
+start_date = get_date('2021-04-01')
+end_date = get_date('2021-04-26')
 stations = load_stations('./stations.txt')
 
 # Empty DataFrame initialization
@@ -86,6 +99,22 @@ for station_cod in stations:
         
         # Concat to general DataFrame
         final_df = final_df.append(df, ignore_index=True)  
+
+# Flag to retrieve only rain info
+if FLAG_RAIN:
+    df = final_df.copy()
+    df = (
+        df
+        .reindex(columns=['CHUVA', 'DT_MEDICAO'])
+        .rename(columns={'CHUVA': 'Pluviometria', 'DT_MEDICAO': 'Data'})
+        .set_index(['Estação', 'Data'])
+    )
+    df['Pluviometria'] = pd.to_numeric(df['Pluviometria'])
+    df_agg = df.groupby(by=['Estação', 'Data'])['Pluviometria'].sum().round(2)
+    df_agg = df_agg.reset_index()
+    df_agg['Data'] = pd.to_datetime(df_agg['Data'], '%Y-%m-%d').dt.strftime('%d-%m-%Y')
+
+    final_df = df_agg
 
 # Save final DataFrame to .CSV file
 final_df.to_csv('final_df.csv', encoding='utf-8-sig', decimal=',', index=False)
